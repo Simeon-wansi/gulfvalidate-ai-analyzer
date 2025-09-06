@@ -1,4 +1,6 @@
 // src/services/ondemandApi.ts - Production-ready OnDemand API service
+import { debugAnalysis, debugApiFlow } from "@/utils/debug";
+
 export interface AnalysisRequest {
   businessDescription: string;
   targetMarkets: string;
@@ -181,10 +183,12 @@ class OnDemandApiService {
   // Get comprehensive analysis
   async getComprehensiveAnalysis(request: AnalysisRequest): Promise<AnalysisResult> {
     try {
-      console.log('Starting comprehensive OnDemand analysis...');
+      console.log('🚀 Starting comprehensive OnDemand analysis...');
+      debugApiFlow('Analysis Start', request);
       
       // Create session
       const sessionId = await this.createChatSession();
+      debugApiFlow('Session Created', { sessionId });
       
       // Construct comprehensive analysis query
       const analysisQuery = `
@@ -252,31 +256,61 @@ Also provide:
 Format as structured investment-grade analysis suitable for decision making.
 `;
 
+      debugApiFlow('Submitting Query', { sessionId, queryLength: analysisQuery.length });
+
       // Submit comprehensive query
       const result = await this.submitQuery(sessionId, analysisQuery);
       
+      debugApiFlow('Raw API Response', result);
+
       // Parse OnDemand response
-      return this.parseOnDemandResponse(result, request, sessionId);
+      const finalResult = this.parseOnDemandResponse(result, request, sessionId);
+      
+      console.log('✅ OnDemand comprehensive analysis completed successfully');
+      return finalResult;
 
     } catch (error) {
-      console.error('OnDemand comprehensive analysis failed, using Railway backup:', error);
+      console.error('❌ OnDemand comprehensive analysis failed:', error);
+      debugApiFlow('Analysis Failed', undefined, undefined, error);
+      
+      console.log('🔄 Falling back to Railway backup analysis...');
       return this.getRailwayAnalysis(request);
     }
   }
 
   // Parse OnDemand response into structured format
-  private parseOnDemandResponse(ondemandResult: any, request: AnalysisRequest, sessionId: string): AnalysisResult {
-    console.log('Parsing OnDemand analysis response...');
+  private parseOnDemandResponse(ondemandResult: unknown, request: AnalysisRequest, sessionId: string): AnalysisResult {
+    console.log('🔍 Parsing OnDemand analysis response...');
+    debugAnalysis('OnDemand Raw Response', ondemandResult);
     
-    // Extract analysis text
+    // Extract analysis text from multiple possible response structures
     let analysisText = '';
-    if (ondemandResult.data?.answer) {
-      analysisText = ondemandResult.data.answer;
-    } else if (ondemandResult.answer) {
-      analysisText = ondemandResult.answer;
+    
+    if (ondemandResult && typeof ondemandResult === 'object') {
+      const result = ondemandResult as Record<string, unknown>;
+      
+      // Try multiple extraction paths
+      if (result.data && typeof result.data === 'object') {
+        const data = result.data as Record<string, unknown>;
+        if (typeof data.answer === 'string') {
+          analysisText = data.answer;
+        }
+      } else if (typeof result.answer === 'string') {
+        analysisText = result.answer;
+      } else if (typeof result.response === 'string') {
+        analysisText = result.response;
+      } else if (typeof result.message === 'string') {
+        analysisText = result.message;
+      }
     }
 
-    console.log('Analysis text length:', analysisText.length);
+    console.log('📝 Extracted analysis text length:', analysisText.length);
+    debugAnalysis('Extracted Analysis Text', analysisText.substring(0, 500) + '...');
+
+    if (!analysisText || analysisText.length < 100) {
+      console.warn('⚠️ Analysis text is too short or missing, using fallback data');
+      debugAnalysis('Full Response Structure', ondemandResult);
+    }
 
     // Extract scores using multiple patterns
     const scores = this.extractScores(analysisText);
@@ -287,7 +321,7 @@ Format as structured investment-grade analysis suitable for decision making.
     const concerns = this.extractConcerns(analysisText);
     const recommendations = this.extractRecommendations(analysisText);
 
-    return {
+    const finalResult: AnalysisResult = {
       overallScore,
       interpretation: this.getScoreInterpretation(overallScore),
       scores,
@@ -308,6 +342,11 @@ Format as structured investment-grade analysis suitable for decision making.
         progress: 100
       }]
     };
+
+    debugAnalysis('Final Parsed Result', finalResult);
+    console.log('✅ OnDemand response parsing complete');
+    
+    return finalResult;
   }
 
   // Extract scores from analysis text

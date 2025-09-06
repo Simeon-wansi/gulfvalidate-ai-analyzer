@@ -1,9 +1,12 @@
 import AnalysisProgress from "@/components/AnalysisProgress";
+import { AnalysisErrorBoundary } from "@/components/AnalysisErrorBoundary";
 
 const Analysis = () => {
   return (
     <div className="min-h-screen">
-      <AnalysisProgress />
+      <AnalysisErrorBoundary>
+        <AnalysisProgress />
+      </AnalysisErrorBoundary>
     </div>
   );
 };

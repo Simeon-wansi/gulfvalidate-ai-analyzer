@@ -29,9 +29,12 @@ const ShareResults = ({ analysisResult }: ShareResultsProps) => {
   const handleDownloadPdf = async () => {
     setIsGeneratingPdf(true);
     try {
+      console.log('🔄 Starting PDF generation...', { analysisResult });
       await generatePdf(analysisResult, "analysis-report");
+      console.log('✅ PDF generation completed successfully');
       toast.success("PDF report downloaded successfully!");
     } catch (error) {
+      console.error('❌ PDF generation failed:', error);
       toast.error("Failed to generate PDF. Please try again.");
     } finally {
       setIsGeneratingPdf(false);

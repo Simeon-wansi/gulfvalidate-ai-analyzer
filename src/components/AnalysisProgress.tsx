@@ -1,17 +1,18 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { BarChart3, TrendingUp, Users, Globe, Shield, DollarSign, Cog, CheckCircle, AlertCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { onDemandApi, type AnalysisRequest, type AnalysisResult } from "@/services/ondemandApi";
 import { toast } from "@/components/ui/sonner";
+import { debugAnalysis, debugLocalStorage, debugApiFlow } from "@/utils/debug";
 
 interface AgentProgress {
   name: string;
-  icon: any;
+  icon: React.ElementType;
   status: 'pending' | 'running' | 'completed' | 'error';
   progress: number;
-  result?: any;
+  result?: unknown;
 }
 
 const AnalysisProgress = () => {
@@ -20,6 +21,10 @@ const AnalysisProgress = () => {
   const [currentStage, setCurrentStage] = useState(0);
   const [analysisComplete, setAnalysisComplete] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // Use ref to prevent multiple analysis calls
+  const analysisStarted = useRef(false);
   
   const [agents, setAgents] = useState<AgentProgress[]>([
     { name: "Document Parser", icon: BarChart3, status: 'pending', progress: 0 },
@@ -32,29 +37,56 @@ const AnalysisProgress = () => {
     { name: "Final Scoring", icon: BarChart3, status: 'pending', progress: 0 },
   ]);
 
+  // Fixed useEffect with proper dependency array
   useEffect(() => {
-    startRealAnalysis();
-  }, []);
+    const initializeAnalysis = async () => {
+      if (!analysisStarted.current) {
+        analysisStarted.current = true;
+        
+        // Prevent multiple calls
+        if (isLoading) {
+          console.log('Analysis already in progress, skipping...');
+          return;
+        }
+
+        setIsLoading(true);
+        setError(null);
+        
+        try {
+          debugLocalStorage();
+          
+          // Get the analysis request from localStorage
+          const storedRequest = localStorage.getItem('analysisRequest');
+          if (!storedRequest) {
+            setError('No analysis request found');
+            setIsLoading(false);
+            return;
+          }
+
+          const analysisRequest: AnalysisRequest = JSON.parse(storedRequest);
+          debugAnalysis('Analysis Request Loaded', analysisRequest);
+          
+          // Start the comprehensive analysis
+          await runComprehensiveAnalysis(analysisRequest);
+          
+        } catch (error) {
+          console.error('Analysis failed:', error);
+          const errorMessage = error instanceof Error ? error.message : 'Analysis failed. Please try again.';
+          setError(errorMessage);
+          toast.error(errorMessage);
+          debugApiFlow('Analysis Error', undefined, undefined, error);
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    initializeAnalysis();
+  }, []); // Empty dependency array - analysis should only run once
 
   const startRealAnalysis = async () => {
-    try {
-      // Get the analysis request from localStorage
-      const storedRequest = localStorage.getItem('analysisRequest');
-      if (!storedRequest) {
-        setError('No analysis request found');
-        return;
-      }
-
-      const analysisRequest: AnalysisRequest = JSON.parse(storedRequest);
-      
-      // Start the comprehensive analysis
-      await runComprehensiveAnalysis(analysisRequest);
-      
-    } catch (error) {
-      console.error('Analysis failed:', error);
-      setError('Analysis failed. Please try again.');
-      toast.error('Analysis failed. Please try again.');
-    }
+    // This function is now only called from useEffect
+    console.warn('startRealAnalysis called directly - this should not happen');
   };
 
   const runComprehensiveAnalysis = async (request: AnalysisRequest) => {
@@ -68,6 +100,8 @@ const AnalysisProgress = () => {
       { index: 6, name: 'Competition Analysis', delay: 3200 },
       { index: 7, name: 'Final Scoring', delay: 1500 }
     ];
+
+    debugApiFlow('Starting Analysis', request);
 
     // Start the comprehensive analysis in the background
     const analysisPromise = onDemandApi.getComprehensiveAnalysis(request);
@@ -103,20 +137,28 @@ const AnalysisProgress = () => {
       setProgress(90);
       const finalResult = await analysisPromise;
       
+      debugAnalysis('Analysis Result Received', finalResult);
+      
       // Store results for the results page
       localStorage.setItem('analysisResults', JSON.stringify(finalResult));
+      console.log('✅ Results stored in localStorage');
+      
+      debugLocalStorage(); // Show final localStorage state
       
       setProgress(100);
       setAnalysisComplete(true);
       
       // Redirect to results after a short delay
       setTimeout(() => {
+        console.log('🔄 Navigating to results...');
         navigate('/results');
       }, 2000);
       
     } catch (error) {
       console.error('Comprehensive analysis failed:', error);
-      setError('Failed to generate comprehensive analysis');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to generate comprehensive analysis';
+      setError(errorMessage);
+      debugApiFlow('Analysis Failed', undefined, undefined, error);
     }
   };
 

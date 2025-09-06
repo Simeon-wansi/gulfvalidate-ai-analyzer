@@ -19,6 +19,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { getAnalysisFromUrl } from "@/services/shareService";
 import type { AnalysisResult } from "@/services/ondemandApi";
+import { debugAnalysis, debugLocalStorage } from "@/utils/debug";
 
 const mockResults: AnalysisResult = {
   overallScore: 78,
@@ -52,26 +53,59 @@ const mockResults: AnalysisResult = {
 };
 
 const ResultsDashboard = () => {
+  // ✅ ALL HOOKS MUST BE AT THE TOP - BEFORE ANY CONDITIONS
   const navigate = useNavigate();
   const [animationComplete, setAnimationComplete] = useState(false);
   const [results, setResults] = useState<AnalysisResult | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
+  // ✅ ALL useEffect hooks BEFORE any early returns
   useEffect(() => {
-    // Try to get results from URL (for shared links)
-    const urlResults = getAnalysisFromUrl();
-    if (urlResults) {
-      setResults(urlResults);
-      return;
-    }
+    const loadResults = () => {
+      console.log('🔍 Loading analysis results...');
+      debugLocalStorage();
+      
+      try {
+        // Try to get results from URL (for shared links)
+        const urlResults = getAnalysisFromUrl();
+        if (urlResults) {
+          console.log('✅ Results loaded from URL');
+          debugAnalysis('URL Results Loaded', urlResults);
+          setResults(urlResults);
+          setIsLoading(false);
+          return;
+        }
 
-    // Otherwise, get from localStorage (from analysis flow)
-    const storedResults = localStorage.getItem("analysisResults");
-    if (storedResults) {
-      setResults(JSON.parse(storedResults));
-    } else {
-      // Fallback to mock data if nothing is found
-      setResults(mockResults);
-    }
+        // Otherwise, get from localStorage (from analysis flow)
+        const storedResults = localStorage.getItem("analysisResults");
+        console.log('📦 Raw localStorage data:', storedResults ? 'Found' : 'Not found');
+        
+        if (storedResults) {
+          try {
+            const parsed = JSON.parse(storedResults);
+            console.log('✅ Results loaded from localStorage');
+            debugAnalysis('LocalStorage Results Loaded', parsed);
+            setResults(parsed);
+          } catch (parseError) {
+            console.error('❌ Failed to parse stored results:', parseError);
+            setLoadError('Failed to parse stored analysis results');
+            debugAnalysis('Parse Error', { storedResults, error: parseError });
+          }
+        } else {
+          console.warn('⚠️ No stored results found, using mock data');
+          setResults(mockResults);
+        }
+      } catch (error) {
+        console.error('❌ Error loading results:', error);
+        setLoadError('Failed to load analysis results');
+        debugAnalysis('Load Error', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadResults();
   }, []);
 
   useEffect(() => {
@@ -83,23 +117,6 @@ const ResultsDashboard = () => {
     }
   }, [results]);
 
-  if (!results) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="loading-spinner w-12 h-12"></div>
-      </div>
-    );
-  }
-
-  const scoreMetrics = [
-    { label: "Market Opportunity", score: results.scores.market, icon: TrendingUp, color: "text-success" },
-    { label: "Financial Viability", score: results.scores.financial, icon: DollarSign, color: "text-primary" },
-    { label: "Technical Feasibility", score: results.scores.technical, icon: Cog, color: "text-primary-light" },
-    { label: "Legal Compliance", score: results.scores.legal, icon: Shield, color: "text-warning" },
-    { label: "Cultural Fit", score: results.scores.cultural, icon: Globe, color: "text-success" },
-    { label: "Competitive Position", score: results.scores.competitive, icon: Users, color: "text-primary" }
-  ];
-
   useEffect(() => {
     const timer = setTimeout(() => {
       setAnimationComplete(true);
@@ -107,6 +124,7 @@ const ResultsDashboard = () => {
     return () => clearTimeout(timer);
   }, []);
 
+  // ✅ Helper functions AFTER hooks but BEFORE early returns
   const getScoreColor = (score: number) => {
     if (score >= 80) return "score-excellent";
     if (score >= 65) return "score-good";
@@ -120,6 +138,73 @@ const ResultsDashboard = () => {
     if (score >= 50) return "text-warning bg-warning/10";
     return "text-destructive bg-destructive/10";
   };
+
+  // ✅ Early returns ONLY after all hooks
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-secondary/20 to-background">
+        <div className="text-center">
+          <div className="loading-spinner w-12 h-12 mx-auto mb-4"></div>
+          <h2 className="text-xl font-semibold mb-2">Loading Results...</h2>
+          <p className="text-muted-foreground">Please wait while we prepare your analysis</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (loadError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-secondary/20 to-background">
+        <Card className="card-professional text-center max-w-md">
+          <div className="p-8">
+            <AlertTriangle className="w-16 h-16 text-destructive mx-auto mb-4" />
+            <h2 className="text-xl font-semibold mb-2 text-destructive">Error Loading Results</h2>
+            <p className="text-muted-foreground mb-6">{loadError}</p>
+            <div className="flex gap-4 justify-center">
+              <Button onClick={() => window.location.reload()} variant="outline">
+                Retry
+              </Button>
+              <Button onClick={() => navigate('/analyze')} className="btn-hero">
+                New Analysis
+              </Button>
+            </div>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  // No results state
+  if (!results) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-secondary/20 to-background">
+        <Card className="card-professional text-center max-w-md">
+          <div className="p-8">
+            <BarChart3 className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+            <h2 className="text-xl font-semibold mb-2">No Results Found</h2>
+            <p className="text-muted-foreground mb-6">
+              We couldn't find any analysis results. Please start a new analysis.
+            </p>
+            <Button onClick={() => navigate('/analyze')} className="btn-hero">
+              Start Analysis
+            </Button>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  // ✅ Main component logic AFTER all early returns
+  const scoreMetrics = [
+    { label: "Market Opportunity", score: results.scores.market, icon: TrendingUp, color: "text-success" },
+    { label: "Financial Viability", score: results.scores.financial, icon: DollarSign, color: "text-primary" },
+    { label: "Technical Feasibility", score: results.scores.technical, icon: Cog, color: "text-primary-light" },
+    { label: "Legal Compliance", score: results.scores.legal, icon: Shield, color: "text-warning" },
+    { label: "Cultural Fit", score: results.scores.cultural, icon: Globe, color: "text-success" },
+    { label: "Competitive Position", score: results.scores.competitive, icon: Users, color: "text-primary" }
+  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-background py-12">

@@ -3,19 +3,25 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowRight, CheckCircle, BarChart3, Globe, Cog, FileText } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { ArrowRight, CheckCircle, BarChart3, Globe, Cog, FileText, Upload, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { onDemandApi, type AnalysisRequest } from "@/services/ondemandApi";
+import { toast } from "@/components/ui/sonner";
 
 interface FormData {
   businessDescription: string;
   targetMarkets: string;
   businessStage: string;
   businessModel: string;
+  documentFile?: File;
 }
 
 const AnalysisForm = () => {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     businessDescription: "",
     targetMarkets: "",
@@ -34,9 +40,37 @@ const AnalysisForm = () => {
     if (currentStep < 4) {
       setCurrentStep(currentStep + 1);
     } else {
-      // Store form data and navigate to analysis
-      localStorage.setItem('analysisData', JSON.stringify(formData));
+      handleSubmit();
+    }
+  };
+
+  const handleSubmit = async () => {
+    setIsSubmitting(true);
+    
+    try {
+      const request: AnalysisRequest = {
+        businessDescription: formData.businessDescription,
+        targetMarkets: formData.targetMarkets,
+        businessStage: formData.businessStage,
+        businessModel: formData.businessModel,
+        documentFile: formData.documentFile
+      };
+
+      // Store analysis request for the analysis page
+      localStorage.setItem('analysisRequest', JSON.stringify(request));
+      
+      // Start the analysis
+      const sessionId = await onDemandApi.startAnalysis(request);
+      localStorage.setItem('analysisSessionId', sessionId);
+      
+      toast.success("Analysis started successfully!");
       navigate('/analysis');
+      
+    } catch (error) {
+      console.error('Analysis failed:', error);
+      toast.error("Failed to start analysis. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -44,6 +78,59 @@ const AnalysisForm = () => {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
     }
+  };
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const file = e.dataTransfer.files[0];
+      if (validateFile(file)) {
+        setFormData({ ...formData, documentFile: file });
+      }
+    }
+  };
+
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      if (validateFile(file)) {
+        setFormData({ ...formData, documentFile: file });
+      }
+    }
+  };
+
+  const validateFile = (file: File): boolean => {
+    const allowedTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'];
+    const maxSize = 10 * 1024 * 1024; // 10MB
+
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Please upload a PDF, Word document, or text file.");
+      return false;
+    }
+
+    if (file.size > maxSize) {
+      toast.error("File size must be less than 10MB.");
+      return false;
+    }
+
+    return true;
+  };
+
+  const removeFile = () => {
+    setFormData({ ...formData, documentFile: undefined });
   };
 
   const isStepValid = () => {
@@ -118,6 +205,60 @@ const AnalysisForm = () => {
                   Provide a detailed description of your business idea, including what problem it solves, 
                   your target customers, and your unique value proposition.
                 </p>
+                
+                {/* File Upload Section */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium mb-2">Upload Business Plan or Pitch Deck (Optional)</label>
+                  <div
+                    className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                      dragActive ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
+                    }`}
+                    onDragEnter={handleDrag}
+                    onDragLeave={handleDrag}
+                    onDragOver={handleDrag}
+                    onDrop={handleDrop}
+                  >
+                    {formData.documentFile ? (
+                      <div className="flex items-center justify-between bg-muted p-3 rounded">
+                        <div className="flex items-center gap-2">
+                          <FileText className="w-5 h-5 text-primary" />
+                          <span className="text-sm font-medium">{formData.documentFile.name}</span>
+                          <span className="text-xs text-muted-foreground">
+                            ({Math.round(formData.documentFile.size / 1024)} KB)
+                          </span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={removeFile}
+                          className="h-8 w-8 p-0 hover:bg-destructive/20"
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <>
+                        <Upload className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                        <p className="text-muted-foreground mb-2">
+                          Drag and drop your document here, or{" "}
+                          <label className="text-primary hover:text-primary/80 cursor-pointer font-medium">
+                            browse files
+                            <Input
+                              type="file"
+                              className="hidden"
+                              accept=".pdf,.docx,.txt"
+                              onChange={handleFileInput}
+                            />
+                          </label>
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Supports PDF, Word documents, and text files (max 10MB)
+                        </p>
+                      </>
+                    )}
+                  </div>
+                </div>
+
                 <Textarea
                   placeholder="Example: AI-powered credit scoring platform for SMEs in the GCC region using alternative data sources like social media and transaction history. B2B SaaS model targeting banks and financial institutions..."
                   className="input-professional min-h-[200px] text-base"
@@ -209,11 +350,20 @@ const AnalysisForm = () => {
               
               <Button
                 onClick={handleNext}
-                disabled={!isStepValid()}
+                disabled={!isStepValid() || isSubmitting}
                 className="btn-hero px-8"
               >
-                {currentStep === 4 ? 'Start Analysis' : 'Next'}
-                <ArrowRight className="ml-2 w-5 h-5" />
+                {isSubmitting ? (
+                  <>
+                    <div className="loading-spinner w-5 h-5 mr-2"></div>
+                    Starting Analysis...
+                  </>
+                ) : (
+                  <>
+                    {currentStep === 4 ? 'Start Analysis' : 'Next'}
+                    <ArrowRight className="ml-2 w-5 h-5" />
+                  </>
+                )}
               </Button>
             </div>
           </div>

@@ -1,42 +1,69 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* GulfValidate Professional Design System */
 
 @layer base {
   :root {
+    /* Brand Colors - Gulf Business Aesthetic */
     --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --foreground: 225 39% 18%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 225 39% 18%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 225 39% 18%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    /* Primary: Deep Blue */
+    --primary: 225 39% 18%;
+    --primary-foreground: 0 0% 100%;
+    --primary-light: 221 83% 53%;
+    --primary-dark: 225 39% 12%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* Gold Accent */
+    --accent: 38 92% 50%;
+    --accent-foreground: 0 0% 100%;
+    --accent-light: 48 96% 53%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    /* Secondary Colors */
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 225 39% 18%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --muted: 220 14% 96%;
+    --muted-foreground: 215 16% 47%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    /* Success/Warning/Error */
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    /* Borders and Inputs */
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 225 39% 18%;
 
-    --radius: 0.5rem;
+    /* Professional Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-light)));
+    --gradient-accent: linear-gradient(135deg, hsl(var(--accent)), hsl(var(--accent-light)));
+    --gradient-hero: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary-light)) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%) 0%, hsl(220 14% 98%) 100%);
+
+    /* Professional Shadows */
+    --shadow-soft: 0 2px 8px hsl(225 39% 18% / 0.04);
+    --shadow-medium: 0 4px 16px hsl(225 39% 18% / 0.08);
+    --shadow-strong: 0 8px 32px hsl(225 39% 18% / 0.12);
+    --shadow-accent: 0 4px 20px hsl(var(--accent) / 0.3);
+
+    --radius: 0.75rem;
 
     --sidebar-background: 0 0% 98%;
 
@@ -100,6 +127,70 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-inter;
+  }
+}
+
+@layer components {
+  /* Professional Buttons */
+  .btn-hero {
+    @apply bg-gradient-to-r from-primary to-primary-light text-primary-foreground font-semibold px-8 py-4 rounded-lg shadow-[var(--shadow-medium)] hover:shadow-[var(--shadow-strong)] transition-all duration-300 hover:scale-105;
+  }
+  
+  .btn-accent {
+    @apply bg-gradient-to-r from-accent to-accent-light text-accent-foreground font-semibold px-6 py-3 rounded-lg shadow-[var(--shadow-accent)] hover:shadow-[var(--shadow-strong)] transition-all duration-300;
+  }
+
+  /* Professional Cards */
+  .card-professional {
+    @apply bg-gradient-to-br from-white to-secondary rounded-xl shadow-[var(--shadow-soft)] hover:shadow-[var(--shadow-medium)] transition-all duration-300 border border-border p-6;
+  }
+
+  .card-metric {
+    @apply bg-white rounded-xl shadow-[var(--shadow-soft)] border border-border p-6 hover:shadow-[var(--shadow-medium)] transition-all duration-300;
+  }
+
+  /* Score Displays */
+  .score-excellent {
+    @apply text-success;
+  }
+  
+  .score-good {
+    @apply text-primary-light;
+  }
+  
+  .score-fair {
+    @apply text-warning;
+  }
+  
+  .score-poor {
+    @apply text-destructive;
+  }
+
+  /* Professional Animations */
+  .fade-up {
+    @apply opacity-0 translate-y-8 transition-all duration-700 ease-out;
+  }
+  
+  .fade-up.animate-in {
+    @apply opacity-100 translate-y-0;
+  }
+
+  .pulse-accent {
+    @apply animate-pulse;
+  }
+
+  /* Loading Animations */
+  .loading-spinner {
+    @apply border-4 border-secondary border-t-primary rounded-full animate-spin;
+  }
+
+  /* Professional Form Elements */
+  .input-professional {
+    @apply w-full px-4 py-3 border border-border rounded-lg bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200 font-medium;
+  }
+
+  .select-professional {
+    @apply w-full px-4 py-3 border border-border rounded-lg bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200 font-medium appearance-none;
   }
 }

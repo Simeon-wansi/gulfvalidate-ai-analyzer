@@ -40,10 +40,20 @@ const Header = () => {
             >
               Analyze
             </button>
-            <button className="font-medium text-primary-foreground/90 hover:text-accent transition-colors">
+            <button 
+              onClick={() => navigate('/about')}
+              className={`font-medium transition-colors hover:text-accent ${
+                location.pathname === '/about' ? 'text-accent' : 'text-primary-foreground/90'
+              }`}
+            >
               About
             </button>
-            <button className="font-medium text-primary-foreground/90 hover:text-accent transition-colors">
+            <button 
+              onClick={() => navigate('/contact')}
+              className={`font-medium transition-colors hover:text-accent ${
+                location.pathname === '/contact' ? 'text-accent' : 'text-primary-foreground/90'
+              }`}
+            >
               Contact
             </button>
           </nav>

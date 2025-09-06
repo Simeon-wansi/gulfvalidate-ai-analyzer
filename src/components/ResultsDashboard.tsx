@@ -2,9 +2,8 @@ import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import ShareResults from "@/components/ShareResults";
 import { 
-  Download, 
-  Share2, 
   BarChart3, 
   DollarSign, 
   Cog, 
@@ -18,57 +17,79 @@ import {
   Calendar
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { getAnalysisFromUrl } from "@/services/shareService";
+import type { AnalysisResult } from "@/services/ondemandApi";
 
-interface AnalysisResult {
-  overallScore: number;
-  interpretation: string;
+const mockResults: AnalysisResult = {
+  overallScore: 78,
+  interpretation: "Highly Viable",
   scores: {
-    market: number;
-    financial: number;
-    technical: number;
-    legal: number;
-    cultural: number;
-    competitive: number;
-  };
-  strengths: string[];
-  concerns: string[];
-  recommendations: string[];
-}
+    market: 85,
+    financial: 72,
+    technical: 88,
+    legal: 68,
+    cultural: 82,
+    competitive: 75
+  },
+  strengths: [
+    "Strong market demand in UAE and Saudi Arabia",
+    "Scalable SaaS business model with recurring revenue",
+    "Technical implementation is feasible with existing technology",
+    "Good cultural fit for Gulf business practices"
+  ],
+  concerns: [
+    "Regulatory compliance requires additional attention",
+    "High competition in fintech space",
+    "Initial customer acquisition may be challenging"
+  ],
+  recommendations: [
+    "Focus on regulatory compliance early in development",
+    "Partner with local financial institutions for credibility",
+    "Develop strong customer acquisition strategy",
+    "Consider gradual market expansion starting with UAE"
+  ],
+  agentResponses: []
+};
 
 const ResultsDashboard = () => {
   const navigate = useNavigate();
   const [animationComplete, setAnimationComplete] = useState(false);
-  
-  // Mock data - in real app, this would come from API
-  const results: AnalysisResult = {
-    overallScore: 78,
-    interpretation: "Highly Viable",
-    scores: {
-      market: 85,
-      financial: 72,
-      technical: 88,
-      legal: 68,
-      cultural: 82,
-      competitive: 75
-    },
-    strengths: [
-      "Strong market demand in UAE and Saudi Arabia",
-      "Scalable SaaS business model with recurring revenue",
-      "Technical implementation is feasible with existing technology",
-      "Good cultural fit for Gulf business practices"
-    ],
-    concerns: [
-      "Regulatory compliance requires additional attention",
-      "High competition in fintech space",
-      "Initial customer acquisition may be challenging"
-    ],
-    recommendations: [
-      "Focus on regulatory compliance early in development",
-      "Partner with local financial institutions for credibility",
-      "Develop strong customer acquisition strategy",
-      "Consider gradual market expansion starting with UAE"
-    ]
-  };
+  const [results, setResults] = useState<AnalysisResult | null>(null);
+
+  useEffect(() => {
+    // Try to get results from URL (for shared links)
+    const urlResults = getAnalysisFromUrl();
+    if (urlResults) {
+      setResults(urlResults);
+      return;
+    }
+
+    // Otherwise, get from localStorage (from analysis flow)
+    const storedResults = localStorage.getItem("analysisResults");
+    if (storedResults) {
+      setResults(JSON.parse(storedResults));
+    } else {
+      // Fallback to mock data if nothing is found
+      setResults(mockResults);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (results) {
+      const timer = setTimeout(() => {
+        setAnimationComplete(true);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [results]);
+
+  if (!results) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="loading-spinner w-12 h-12"></div>
+      </div>
+    );
+  }
 
   const scoreMetrics = [
     { label: "Market Opportunity", score: results.scores.market, icon: TrendingUp, color: "text-success" },
@@ -263,15 +284,8 @@ const ResultsDashboard = () => {
         {/* Action Buttons */}
         <Card className="card-professional">
           <div className="p-8">
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button className="btn-hero">
-                <Download className="w-5 h-5 mr-2" />
-                Download PDF Report
-              </Button>
-              <Button variant="outline" className="border-primary text-primary hover:bg-primary/5">
-                <Share2 className="w-5 h-5 mr-2" />
-                Share Results
-              </Button>
+            <div className="flex flex-col sm:flex-row flex-wrap gap-4 justify-center">
+              <ShareResults analysisResult={results} />
               <Button 
                 variant="outline" 
                 onClick={() => navigate('/analyze')}
@@ -280,7 +294,11 @@ const ResultsDashboard = () => {
                 <RefreshCw className="w-5 h-5 mr-2" />
                 New Analysis
               </Button>
-              <Button variant="outline" className="border-success text-success hover:bg-success/5">
+              <Button 
+                variant="outline" 
+                onClick={() => navigate('/contact')}
+                className="border-success text-success hover:bg-success/5"
+              >
                 <Calendar className="w-5 h-5 mr-2" />
                 Schedule Consultation
               </Button>

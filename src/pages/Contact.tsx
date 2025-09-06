@@ -1,11 +1,9 @@
-import Header from "@/components/Header";
 import ContactForm from "@/components/ContactForm";
 import { Mail, Clock, MapPin } from "lucide-react";
 
 const Contact = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-background">
-      <Header />
       <main className="py-20">
         <div className="container mx-auto px-6 max-w-6xl">
           {/* Header */}

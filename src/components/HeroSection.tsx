@@ -1,9 +1,12 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, BarChart3, Users, Globe, Shield } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { SampleReport } from "@/components/SampleReport";
 
 const HeroSection = () => {
   const navigate = useNavigate();
+  const [isSampleReportOpen, setIsSampleReportOpen] = useState(false);
 
   const stats = [
     { label: "Startups Analyzed", value: "500+", icon: BarChart3 },
@@ -45,6 +48,7 @@ const HeroSection = () => {
               </Button>
               <Button 
                 variant="outline" 
+                onClick={() => setIsSampleReportOpen(true)}
                 className="text-primary border-primary hover:bg-primary/5 px-8 py-4 text-lg font-semibold"
               >
                 View Sample Report
@@ -103,6 +107,7 @@ const HeroSection = () => {
           </div>
         </div>
       </div>
+      <SampleReport isOpen={isSampleReportOpen} onClose={() => setIsSampleReportOpen(false)} />
     </section>
   );
 };

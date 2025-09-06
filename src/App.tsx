@@ -10,6 +10,8 @@ import Results from "./pages/Results";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
 import NotFound from "./pages/NotFound";
+import { Footer } from "@/components/Footer";
+import Header from "@/components/Header"; // Assuming you have a Header component
 
 const queryClient = new QueryClient();
 
@@ -19,16 +21,21 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/analyze" element={<Analyze />} />
-          <Route path="/analysis" element={<Analysis />} />
-          <Route path="/results" element={<Results />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/contact" element={<Contact />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <div className="flex flex-col min-h-screen">
+          <Header />
+          <main className="flex-grow">
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/analyze" element={<Analyze />} />
+              <Route path="/analysis" element={<Analysis />} />
+              <Route path="/results" element={<Results />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/contact" element={<Contact />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </main>
+          <Footer />
+        </div>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

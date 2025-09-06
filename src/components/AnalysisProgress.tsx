@@ -59,16 +59,20 @@ const AnalysisProgress = () => {
 
   const runComprehensiveAnalysis = async (request: AnalysisRequest) => {
     const agentSequence = [
-      { index: 0, name: 'document_parser', delay: 2000 },
-      { index: 1, name: 'market_research', delay: 3000 },
-      { index: 2, name: 'financial_feasibility', delay: 2500 },
-      { index: 3, name: 'technical_viability', delay: 2000 },
-      { index: 4, name: 'legal_regulatory', delay: 2800 },
-      { index: 5, name: 'cultural_adaptation', delay: 2200 },
-      { index: 6, name: 'competition_analysis', delay: 3200 },
-      { index: 7, name: 'summary_scoring', delay: 1500 }
+      { index: 0, name: 'Document Parser', delay: 2000 },
+      { index: 1, name: 'Market Research', delay: 3000 },
+      { index: 2, name: 'Financial Feasibility', delay: 2500 },
+      { index: 3, name: 'Technical Viability', delay: 2000 },
+      { index: 4, name: 'Legal Regulatory', delay: 2800 },
+      { index: 5, name: 'Cultural Adaptation', delay: 2200 },
+      { index: 6, name: 'Competition Analysis', delay: 3200 },
+      { index: 7, name: 'Final Scoring', delay: 1500 }
     ];
 
+    // Start the comprehensive analysis in the background
+    const analysisPromise = onDemandApi.getComprehensiveAnalysis(request);
+
+    // Simulate progress for visual feedback
     for (let i = 0; i < agentSequence.length; i++) {
       const agent = agentSequence[i];
       
@@ -80,32 +84,29 @@ const AnalysisProgress = () => {
         // Simulate progress for visual feedback
         await simulateProgress(agent.index, agent.delay);
         
-        // Actually call the OnDemand agent
-        const query = `${agent.name} analysis for: Business: ${request.businessDescription}. Markets: ${request.targetMarkets}. Stage: ${request.businessStage}. Model: ${request.businessModel}`;
-        
-        const result = await onDemandApi.runAgentAnalysis(agent.name as any, query);
-        
         // Mark agent as completed
         updateAgentStatus(agent.index, 'completed', 100);
         
         // Update overall progress
-        const overallProgress = ((i + 1) / agentSequence.length) * 100;
+        const overallProgress = ((i + 1) / agentSequence.length) * 85; // Leave 15% for final processing
         setProgress(overallProgress);
         
       } catch (error) {
-        console.error(`Agent ${agent.name} failed:`, error);
+        console.error(`Agent ${agent.name} simulation failed:`, error);
         updateAgentStatus(agent.index, 'error', 0);
         // Continue with other agents even if one fails
       }
     }
 
-    // Get final comprehensive analysis
+    // Wait for the actual analysis to complete
     try {
-      const finalResult = await onDemandApi.getComprehensiveAnalysis(request);
+      setProgress(90);
+      const finalResult = await analysisPromise;
       
       // Store results for the results page
       localStorage.setItem('analysisResults', JSON.stringify(finalResult));
       
+      setProgress(100);
       setAnalysisComplete(true);
       
       // Redirect to results after a short delay
@@ -114,8 +115,8 @@ const AnalysisProgress = () => {
       }, 2000);
       
     } catch (error) {
-      console.error('Final analysis failed:', error);
-      setError('Failed to generate final analysis');
+      console.error('Comprehensive analysis failed:', error);
+      setError('Failed to generate comprehensive analysis');
     }
   };
 
